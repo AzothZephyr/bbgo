@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,16 +22,25 @@ import (
 )
 
 const (
-	restEndpoint       = "https://ftx.com"
 	defaultHTTPTimeout = 15 * time.Second
 )
 
-var logger = logrus.WithField("exchange", "ftx")
+var logger *logrus.Entry
 
 // POST https://ftx.com/api/orders 429, Success: false, err: Do not send more than 2 orders on this market per 200ms
 var requestLimit = rate.NewLimiter(rate.Every(220*time.Millisecond), 2)
 
 var marketDataLimiter = rate.NewLimiter(rate.Every(500*time.Millisecond), 2)
+
+func isFTXUs() bool {
+	v, err := strconv.ParseBool(os.Getenv("FTX_US"))
+
+	if err != nil {
+		logger = logrus.WithField("exchange", "unknown - ftx type")
+		logger.WithError(err).Fatalf("cannot determine if ftx or ftx.us")
+	}
+	return err == nil && v
+}
 
 //go:generate go run generate_symbol_map.go
 
@@ -80,6 +90,16 @@ func newSpotClientOrderID(originalID string) (clientOrderID string) {
 }
 
 func NewExchange(key, secret string, subAccount string) *Exchange {
+	var restEndpoint string
+
+	if isFTXUs() {
+		restEndpoint = "https://ftx.us/api"
+		logger = logrus.WithField("exchange", "ftxus")
+	} else {
+		restEndpoint = "https://ftx.com/api"
+		logger = logrus.WithField("exchange", "ftxus")
+	}
+
 	u, err := url.Parse(restEndpoint)
 	if err != nil {
 		panic(err)

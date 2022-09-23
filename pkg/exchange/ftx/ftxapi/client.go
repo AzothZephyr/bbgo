@@ -19,9 +19,13 @@ import (
 
 	"github.com/c9s/requestgen"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 const defaultHTTPTimeout = time.Second * 15
+
+var log *logrus.Entry
+
 const FTXBaseURL = "https://ftx.com/api"
 const FTXUSBaseURL = "https://ftx.us/api"
 
@@ -46,18 +50,24 @@ type RestClient struct {
 	*/
 }
 
-func isFTXUs() bool {
+func isFTXUS() bool {
 	v, err := strconv.ParseBool(os.Getenv("FTX_US"))
+
+	if err != nil {
+		log.WithError(err).Fatalf("cannot execute command")
+	}
 	return err == nil && v
 }
 
 func NewClient() *RestClient {
 	var ClientBaseURL string
 
-	if isFTXUs() {
+	if isFTXUS() {
 		ClientBaseURL = FTXUSBaseURL
+		log = logrus.WithField("exchange", "ftxus")
 	} else {
 		ClientBaseURL = FTXBaseURL
+		log = logrus.WithField("exchange", "ftx")
 	}
 
 	u, err := url.Parse(ClientBaseURL)
@@ -180,11 +190,23 @@ func (c *RestClient) attachAuthHeaders(req *http.Request, method string, path st
 	ts := strconv.FormatInt(millisecondTs, 10)
 	p := ts + method + path + string(body)
 	signature := sign(c.Secret, p)
-	req.Header.Set("FTX-KEY", c.Key)
-	req.Header.Set("FTX-SIGN", signature)
-	req.Header.Set("FTX-TS", ts)
-	if c.subAccount != "" {
-		req.Header.Set("FTX-SUBACCOUNT", c.subAccount)
+
+	if isFTXUS() {
+		req.Header.Set("FTXUS-KEY", c.Key)
+		req.Header.Set("FTXUS-SIGN", signature)
+		req.Header.Set("FTXUS-TS", ts)
+
+		if c.subAccount != "" {
+			req.Header.Set("FTXUS-SUBACCOUNT", c.subAccount)
+		}
+	} else {
+		req.Header.Set("FTX-KEY", c.Key)
+		req.Header.Set("FTX-SIGN", signature)
+		req.Header.Set("FTX-TS", ts)
+
+		if c.subAccount != "" {
+			req.Header.Set("FTX-SUBACCOUNT", c.subAccount)
+		}
 	}
 }
 
