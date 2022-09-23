@@ -130,6 +130,7 @@ func (e *Exchange) Name() types.ExchangeName {
 	return types.ExchangeFTX
 }
 
+// TODO: why
 func (e *Exchange) PlatformFeeCurrency() string {
 	return toGlobalCurrency("FTT")
 }
