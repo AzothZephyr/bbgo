@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"time"
 
@@ -21,7 +22,8 @@ import (
 )
 
 const defaultHTTPTimeout = time.Second * 15
-const RestBaseURL = "https://ftx.com/api"
+const FTXBaseURL = "https://ftx.com/api"
+const FTXUSBaseURL = "https://ftx.us/api"
 
 type APIResponse struct {
 	Success     bool            `json:"success"`
@@ -44,8 +46,21 @@ type RestClient struct {
 	*/
 }
 
+func isFTXUs() bool {
+	v, err := strconv.ParseBool(os.Getenv("FTX_US"))
+	return err == nil && v
+}
+
 func NewClient() *RestClient {
-	u, err := url.Parse(RestBaseURL)
+	var ClientBaseURL string
+
+	if isFTXUs() {
+		ClientBaseURL = FTXUSBaseURL
+	} else {
+		ClientBaseURL = FTXBaseURL
+	}
+
+	u, err := url.Parse(ClientBaseURL)
 	if err != nil {
 		panic(err)
 	}
