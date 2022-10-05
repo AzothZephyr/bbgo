@@ -45,12 +45,16 @@ func isFTXUS() bool {
 //go:generate go run generate_symbol_map.go
 
 type Exchange struct {
+	name   string
+	url    string
 	client *ftxapi.RestClient
 
 	key, secret             string
 	subAccount              string
 	restEndpoint            *url.URL
 	orderAmountReduceFactor fixedpoint.Value
+	feeCurrency             string
+	symbolMap               map[string]string
 }
 
 type MarketTicker struct {
@@ -90,17 +94,25 @@ func newSpotClientOrderID(originalID string) (clientOrderID string) {
 }
 
 func NewExchange(key, secret string, subAccount string) *Exchange {
-	var restEndpoint string
-
+	var exch_url string
+	var name string
+	var feeCurrency string
+	var symbolMap map[string]string
 	if isFTXUS() {
-		restEndpoint = "https://ftx.us/api"
-		logger = logrus.WithField("exchange", "ftxus")
+		exch_url = "https://ftx.us/api"
+		name = "ftxus"
+		feeCurrency = "USD"
+		symbolMap = ftxus_symbolMap
 	} else {
-		restEndpoint = "https://ftx.com/api"
-		logger = logrus.WithField("exchange", "ftxus")
+		exch_url = "https://ftx.com/api"
+		name = "ftx"
+		feeCurrency = "FTT"
+		symbolMap = ftx_symbolMap
 	}
 
-	u, err := url.Parse(restEndpoint)
+	logger = logrus.WithField("exchange", name)
+
+	u, err := url.Parse(exch_url)
 	if err != nil {
 		panic(err)
 	}
@@ -108,6 +120,8 @@ func NewExchange(key, secret string, subAccount string) *Exchange {
 	client := ftxapi.NewClient()
 	client.Auth(key, secret, subAccount)
 	return &Exchange{
+		name:         name,
+		url:          exch_url,
 		client:       client,
 		restEndpoint: u,
 		key:          key,
@@ -115,6 +129,8 @@ func NewExchange(key, secret string, subAccount string) *Exchange {
 		secret:                  secret,
 		subAccount:              subAccount,
 		orderAmountReduceFactor: fixedpoint.One,
+		feeCurrency:             feeCurrency,
+		symbolMap:               symbolMap,
 	}
 }
 
@@ -131,11 +147,7 @@ func (e *Exchange) Name() types.ExchangeName {
 }
 
 func (e *Exchange) PlatformFeeCurrency() string {
-	if isFTXUS() {
-		return toGlobalCurrency("USD")
-	} else {
-		return toGlobalCurrency("FTT")
-	}
+	return toGlobalCurrency(e.feeCurrency)
 }
 
 func (e *Exchange) NewStream() types.Stream {
@@ -155,6 +167,7 @@ func (e *Exchange) QueryMarkets(ctx context.Context) (types.MarketMap, error) {
 }
 
 func (e *Exchange) _queryMarkets(ctx context.Context) (MarketMap, error) {
+
 	req := e.client.NewGetMarketsRequest()
 	ftxMarkets, err := req.Do(ctx)
 	if err != nil {
@@ -164,7 +177,7 @@ func (e *Exchange) _queryMarkets(ctx context.Context) (MarketMap, error) {
 	markets := MarketMap{}
 	for _, m := range ftxMarkets {
 		symbol := toGlobalSymbol(m.Name)
-		symbolMap[symbol] = m.Name
+		e.symbolMap[symbol] = m.Name
 
 		mkt2 := MarketTicker{
 			Market: types.Market{
@@ -363,6 +376,7 @@ func (e *Exchange) QueryTrades(ctx context.Context, symbol string, options *type
 	})
 
 	var trades []types.Trade
+	// TODO never used according to my linter
 	symbol = strings.ToUpper(symbol)
 	for _, fill := range fills {
 		if _, ok := tradeIDs[fill.TradeId]; ok {

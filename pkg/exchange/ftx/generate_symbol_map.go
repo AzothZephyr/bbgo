@@ -27,13 +27,13 @@ type Exchange struct {
 	Url  string
 }
 
+var FTX_Exchanges = []*Exchange{
+	&Exchange{Name: "ftxus", Url: "https://ftx.us/api/markets"},
+	&Exchange{Name: "ftx", Url: "https://ftx.com/api/markets"},
+}
+
 func main() {
 	var data = map[string]string{}
-
-	var FTXUS = &Exchange{Name: "ftxus", Url: "https://ftx.us/api/markets"}
-	var FTX = &Exchange{Name: "ftx", Url: "https://ftx.com/api/markets"}
-
-	var FTX_Exchanges = []*Exchange{FTXUS, FTX}
 
 	for i := 0; i < len(FTX_Exchanges); i++ {
 		resp, err := http.Get(FTX_Exchanges[i].Url)

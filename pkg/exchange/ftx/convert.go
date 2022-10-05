@@ -20,11 +20,19 @@ func toGlobalSymbol(original string) string {
 }
 
 func toLocalSymbol(original string) string {
-	if symbolMap[original] == "" {
-		return original
-	}
+	if isFTXUS() {
+		if ftxus_symbolMap[original] == "" {
+			return original
+		}
 
-	return symbolMap[original]
+		return ftxus_symbolMap[original]
+	} else {
+		if ftx_symbolMap[original] == "" {
+			return original
+		}
+
+		return ftx_symbolMap[original]
+	}
 }
 
 func TrimUpperString(original string) string {
