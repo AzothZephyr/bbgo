@@ -285,13 +285,15 @@ Create your mysql database:
 
 ```sh
 mysql -uroot -e "CREATE DATABASE bbgo CHARSET utf8"
+mysql -uroot -e "CREATE USER 'bbgo'@'localhost' IDENTIFIED BY 'password';"
+mysql -uroot -e "GRANT ALL PRIVILEGES ON bbgo.* TO 'bbgo'@'localhost';"
 ```
 
 Then put these environment variables in your `.env.local` file:
 
 ```sh
 DB_DRIVER=mysql
-DB_DSN="user:password@tcp(127.0.0.1:3306)/bbgo"
+DB_DSN="bbgo:password@tcp(127.0.0.1:3306)/bbgo"
 ```
 
 #### Configure Sqlite3 Database
