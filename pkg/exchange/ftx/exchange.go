@@ -32,7 +32,7 @@ var requestLimit = rate.NewLimiter(rate.Every(220*time.Millisecond), 2)
 
 var marketDataLimiter = rate.NewLimiter(rate.Every(500*time.Millisecond), 2)
 
-func isFTXUs() bool {
+func isFTXUS() bool {
 	v, err := strconv.ParseBool(os.Getenv("FTX_US"))
 
 	if err != nil {
@@ -92,7 +92,7 @@ func newSpotClientOrderID(originalID string) (clientOrderID string) {
 func NewExchange(key, secret string, subAccount string) *Exchange {
 	var restEndpoint string
 
-	if isFTXUs() {
+	if isFTXUS() {
 		restEndpoint = "https://ftx.us/api"
 		logger = logrus.WithField("exchange", "ftxus")
 	} else {
@@ -130,9 +130,12 @@ func (e *Exchange) Name() types.ExchangeName {
 	return types.ExchangeFTX
 }
 
-// TODO: why
 func (e *Exchange) PlatformFeeCurrency() string {
-	return toGlobalCurrency("FTT")
+	if isFTXUS() {
+		return toGlobalCurrency("USD")
+	} else {
+		return toGlobalCurrency("FTT")
+	}
 }
 
 func (e *Exchange) NewStream() types.Stream {
