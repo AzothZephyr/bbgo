@@ -98,6 +98,7 @@ func NewExchange(key, secret string, subAccount string) *Exchange {
 	var name string
 	var feeCurrency string
 	var symbolMap map[string]string
+
 	if isFTXUS() {
 		exch_url = "https://ftx.us/api"
 		name = "ftxus"
@@ -119,6 +120,7 @@ func NewExchange(key, secret string, subAccount string) *Exchange {
 
 	client := ftxapi.NewClient()
 	client.Auth(key, secret, subAccount)
+
 	return &Exchange{
 		name:         name,
 		url:          exch_url,
